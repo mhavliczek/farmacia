@@ -86,6 +86,33 @@ router.post('/usuarios', authRequired, requireAdmin, async (req, res) => {
   }
 });
 
+// PATCH /api/auth/me/password — el usuario logueado cambia SU clave.
+// Requiere la clave actual para confirmar identidad.
+router.patch('/me/password', authRequired, async (req, res) => {
+  const { password_actual, password_nueva } = req.body || {};
+  if (!password_actual || !password_nueva) {
+    return res.status(400).json({ error: 'password_actual y password_nueva son obligatorias' });
+  }
+  if (typeof password_nueva !== 'string' || password_nueva.length < 6) {
+    return res.status(400).json({ error: 'La nueva clave debe tener al menos 6 caracteres' });
+  }
+  if (password_nueva === password_actual) {
+    return res.status(400).json({ error: 'La nueva clave debe ser distinta a la actual' });
+  }
+  try {
+    const [rows] = await pool.query('SELECT password_hash FROM usuarios WHERE id = ? AND activo = 1', [req.user.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Usuario no encontrado' });
+    const ok = await bcrypt.compare(password_actual, rows[0].password_hash);
+    if (!ok) return res.status(401).json({ error: 'La clave actual no es correcta' });
+    const hash = await bcrypt.hash(password_nueva, 10);
+    await pool.query('UPDATE usuarios SET password_hash = ? WHERE id = ?', [hash, req.user.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Error al cambiar la clave' });
+  }
+});
+
 // PATCH /api/auth/usuarios/:id (solo admin cambia rol/activo)
 router.patch('/usuarios/:id', authRequired, requireAdmin, async (req, res) => {
   const { rol, activo } = req.body;

@@ -313,6 +313,23 @@ window.setUserRol = async (id, rol) => {
   catch (e) { toast(e.message, false); }
 };
 
+// ---------- Cambiar clave (usuario logueado) ----------
+$('btn-abrir-clave').onclick = () => { $('form-clave').reset(); $('modal-clave').classList.remove('hidden'); };
+$('btn-cerrar-clave').onclick = () => $('modal-clave').classList.add('hidden');
+$('form-clave').onsubmit = async (e) => {
+  e.preventDefault();
+  if ($('cl-nueva').value !== $('cl-repetir').value) { toast('Las claves nuevas no coinciden', false); return; }
+  try {
+    await api('/api/auth/me/password', {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ password_actual: $('cl-actual').value, password_nueva: $('cl-nueva').value }),
+    });
+    $('modal-clave').classList.add('hidden');
+    toast('Clave actualizada');
+  } catch (err) { toast(err.message, false); }
+};
+
 // ---------- Modal alerta vencimiento ----------
 $('btn-alert-cerrar').onclick = () => $('modal-alert').classList.add('hidden');
 $('btn-alert-ver').onclick = () => { $('modal-alert').classList.add('hidden'); showView('medicamentos'); };

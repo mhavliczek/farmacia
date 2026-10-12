@@ -82,6 +82,7 @@ tailwind.config = { darkMode: 'class', theme: { extend: {
     <div class="sidebar-link admin-only" data-view="usuarios">👥 Usuarios</div>
     <div class="mt-auto pt-4 border-t">
       <div class="px-2 text-sm"><div id="user-nombre" class="font-medium"></div><div id="user-email" class="text-xs text-slate-500"></div></div>
+      <button id="btn-abrir-clave" class="btn btn-secondary w-full mt-2">Cambiar clave</button>
       <button id="btn-logout" class="btn btn-secondary w-full mt-2">Cerrar sesión</button>
     </div>
   </aside>
@@ -226,6 +227,17 @@ tailwind.config = { darkMode: 'class', theme: { extend: {
       <div><label class="lbl">Stock mínimo</label><input id="med-min" class="input" type="number" min="0" value="10" /></div>
     </div>
     <div class="flex gap-2 pt-2"><button type="submit" class="btn btn-primary flex-1">Guardar</button><button type="button" id="btn-cerrar-med" class="btn btn-secondary">Cancelar</button></div>
+  </form>
+</div>
+
+<!-- MODAL CAMBIAR CLAVE -->
+<div id="modal-clave" class="modal-bg hidden">
+  <form id="form-clave" class="card w-full max-w-sm p-6 space-y-3 bg-white">
+    <h3 class="font-semibold">Cambiar clave</h3>
+    <div><label class="lbl">Clave actual</label><input id="cl-actual" class="input" type="password" required /></div>
+    <div><label class="lbl">Clave nueva (mín. 6)</label><input id="cl-nueva" class="input" type="password" minlength="6" required /></div>
+    <div><label class="lbl">Repetir clave nueva</label><input id="cl-repetir" class="input" type="password" minlength="6" required /></div>
+    <div class="flex gap-2"><button class="btn btn-primary flex-1">Guardar</button><button type="button" id="btn-cerrar-clave" class="btn btn-secondary">Cancelar</button></div>
   </form>
 </div>
 
