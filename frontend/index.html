@@ -34,6 +34,9 @@ tailwind.config = { darkMode: 'class', theme: { extend: {
   .sidebar-link{ display:flex; align-items:center; gap:.6rem; padding:.55rem .75rem; border-radius:var(--radius); font-size:.875rem; color:#334155; cursor:pointer; } .sidebar-link:hover{ background:hsl(210 40% 96.1%);} .sidebar-link.active{ background:hsl(222.2 47.4% 11.2%); color:white;}
   .modal-bg{ position:fixed; inset:0; background:rgba(15,23,42,.5); display:flex; align-items:center; justify-content:center; z-index:50; padding:1rem;}
   .hidden{ display:none !important; }
+  /* Sidebar visible en escritorio; en móvil se usa #mobile-nav. No usar .hidden aquí (!important lo anularía). */
+  .sidebar{ display:flex; }
+  @media (max-width: 767px){ .sidebar{ display:none; } }
 </style>
 </head>
 <body>
@@ -69,7 +72,7 @@ tailwind.config = { darkMode: 'class', theme: { extend: {
 
 <!-- ===== APP ===== -->
 <div id="view-app" class="hidden min-h-screen flex">
-  <aside class="w-60 shrink-0 border-r bg-white p-4 hidden md:flex flex-col gap-1">
+  <aside class="sidebar w-60 shrink-0 border-r bg-white p-4 flex-col gap-1">
     <div class="flex items-center gap-2 px-2 py-3"><div class="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center">💊</div><div class="font-semibold">Farmacia</div></div>
     <div class="sidebar-link active" data-view="dashboard">📊 Dashboard</div>
     <div class="sidebar-link" data-view="medicamentos">💉 Medicamentos</div>
