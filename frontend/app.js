@@ -1,4 +1,4 @@
-const API = 'http://localhost:4000';
+const API = window.FARMACIA_API || localStorage.getItem('farmacia_api') || 'http://localhost:4000';
 const $ = (id) => document.getElementById(id);
 const state = { token: localStorage.getItem('farmacia_token') || '', user: null, meds: [], cats: [] };
 
