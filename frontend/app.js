@@ -57,27 +57,38 @@ async function enterApp() {
   $('view-app').classList.remove('hidden');
   $('user-nombre').textContent = state.user.nombre + ' · ' + state.user.rol;
   $('user-email').textContent = state.user.email;
+  applyRoleUI();
   buildMobileNav();
   await loadCats();
   await loadDashboard();
   await loadMeds();
 }
 
+const isAdmin = () => state.user?.rol === 'admin';
+function applyRoleUI() {
+  document.querySelectorAll('.admin-only').forEach((el) => {
+    el.classList.toggle('hidden', !isAdmin());
+  });
+}
+
 // ---------- Navegación ----------
-const views = ['dashboard', 'medicamentos', 'inventario', 'recetas', 'categorias'];
+const views = ['dashboard', 'medicamentos', 'inventario', 'recetas', 'categorias', 'usuarios'];
 function buildMobileNav() {
-  $('mobile-nav').innerHTML = views.map((v) => `<button class="btn btn-secondary whitespace-nowrap" data-m="${v}">${v}</button>`).join('');
+  const visible = views.filter((v) => v !== 'usuarios' || isAdmin());
+  $('mobile-nav').innerHTML = visible.map((v) => `<button class="btn btn-secondary whitespace-nowrap" data-m="${v}">${v}</button>`).join('');
   $('mobile-nav').querySelectorAll('button').forEach((b) => (b.onclick = () => showView(b.dataset.m)));
 }
 document.querySelectorAll('.sidebar-link').forEach((el) => (el.onclick = () => showView(el.dataset.view)));
 function showView(v) {
-  views.forEach((x) => $('sec-' + x).classList.toggle('hidden', x !== v));
+  if ((v === 'usuarios' || v === 'categorias') && !isAdmin() && v === 'usuarios') { toast('Solo admin', false); return; }
+  views.forEach((x) => { const s = $('sec-' + x); if (s) s.classList.toggle('hidden', x !== v); });
   document.querySelectorAll('.sidebar-link').forEach((el) => el.classList.toggle('active', el.dataset.view === v));
   if (v === 'dashboard') loadDashboard();
   if (v === 'medicamentos') loadMeds();
   if (v === 'inventario') loadMovs();
   if (v === 'recetas') { loadRecetas(); fillMedSelect($('r-med')); }
   if (v === 'categorias') loadCats();
+  if (v === 'usuarios') loadUsers();
 }
 
 // ---------- Dashboard ----------
@@ -131,16 +142,18 @@ async function loadCats() {
   $('f-cat').innerHTML = '<option value="">Todas las categorías</option>' + cats.map((c) => `<option value="${c.id}">${c.nombre}</option>`).join('');
   $('med-cat').innerHTML = '<option value="">— Sin categoría —</option>' + cats.map((c) => `<option value="${c.id}">${c.nombre}</option>`).join('');
   $('list-cats').innerHTML = cats.map((c) =>
-    `<div class="badge badge-gray !text-sm !py-1.5 !px-3">${c.nombre} <button class="ml-1 text-red-600" onclick="delCat(${c.id})">✕</button></div>`
+    `<div class="badge badge-gray !text-sm !py-1.5 !px-3">${c.nombre} ${isAdmin() ? `<button class="ml-1 text-red-600" onclick="delCat(${c.id})">✕</button>` : ''}</div>`
   ).join('') || '<p class="text-slate-500 text-sm">Sin categorías.</p>';
 }
 $('form-cat').onsubmit = async (e) => {
   e.preventDefault();
-  await api('/api/categorias', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ nombre: $('c-nombre').value.trim(), descripcion: $('c-desc').value.trim() }) });
-  $('c-nombre').value = ''; $('c-desc').value = '';
-  toast('Categoría creada'); loadCats();
+  try {
+    await api('/api/categorias', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ nombre: $('c-nombre').value.trim(), descripcion: $('c-desc').value.trim() }) });
+    $('c-nombre').value = ''; $('c-desc').value = '';
+    toast('Categoría creada'); loadCats();
+  } catch (err) { toast(err.message, false); }
 };
-window.delCat = async (id) => { if (!confirm('¿Eliminar categoría?')) return; await api('/api/categorias/' + id, { method: 'DELETE', headers: authHeaders(false) }); loadCats(); };
+window.delCat = async (id) => { if (!confirm('¿Eliminar categoría?')) return; try { await api('/api/categorias/' + id, { method: 'DELETE', headers: authHeaders(false) }); loadCats(); } catch (e) { toast(e.message, false); } };
 
 // ---------- Medicamentos ----------
 function fillMedSelect(sel) {
@@ -161,6 +174,10 @@ async function loadMeds() {
   $('tbl-meds').innerHTML = meds.map((m) => {
     const venc = m.vencido ? '<span class="badge badge-red">Vencido</span>' : (m.dias_para_vencer <= 90 ? `<span class="badge badge-yellow">${m.dias_para_vencer}d</span>` : `<span class="badge badge-green">OK</span>`);
     const stock = m.bajo_stock ? `<b class="text-yellow-700">${m.cantidad_pastillas}</b> <span class="badge badge-yellow">Bajo</span>` : `<b>${m.cantidad_pastillas}</b>`;
+    const adminBtns = isAdmin()
+      ? `<button class="btn btn-secondary !px-2 !py-1 !text-xs" onclick="editMed(${m.id})">Editar</button>
+         <button class="btn btn-destructive !px-2 !py-1 !text-xs" onclick="delMed(${m.id})">Borrar</button>`
+      : '';
     return `<tr>
       <td><b>${m.nombre}</b><div class="text-xs text-slate-500 max-w-56 truncate">${m.descripcion || ''}</div></td>
       <td><span class="badge badge-gray">${m.gramaje || '—'}</span></td>
@@ -169,31 +186,33 @@ async function loadMeds() {
       <td>${fmtFecha(m.fecha_vencimiento)} ${venc}</td>
       <td>${fmtMoney(m.precio)}</td>
       <td><div class="flex flex-wrap gap-1">
-        <button class="btn btn-outline-green !px-2 !py-1 !text-xs" onclick="openStock(${' + m.id + '},\'entrada\')">+ Entrada</button>
-        <button class="btn btn-outline-red !px-2 !py-1 !text-xs" onclick="openStock(${' + m.id + '},\'salida\')">− Salida</button>
-        <button class="btn btn-secondary !px-2 !py-1 !text-xs" onclick="editMed(${' + m.id + '})">Editar</button>
-        <button class="btn btn-destructive !px-2 !py-1 !text-xs" onclick="delMed(${' + m.id + '})">Borrar</button>
+        <button class="btn btn-outline-green !px-2 !py-1 !text-xs" onclick="openStock(${m.id},'entrada')">+ Entrada</button>
+        <button class="btn btn-outline-red !px-2 !py-1 !text-xs" onclick="openStock(${m.id},'salida')">− Salida</button>
+        ${adminBtns}
       </div></td></tr>`;
   }).join('') || '<tr><td colspan="7" class="text-center text-slate-500 py-6">Sin medicamentos.</td></tr>';
 }
-$('btn-nuevo-med').onclick = () => { $('form-med').reset(); $('med-id').value = ''; $('med-modal-title').textContent = 'Nuevo medicamento'; $('modal-med').classList.remove('hidden'); };
+$('btn-nuevo-med').onclick = () => { if (!isAdmin()) { toast('Solo admin puede crear medicamentos', false); return; } $('form-med').reset(); $('med-id').value = ''; $('med-modal-title').textContent = 'Nuevo medicamento'; $('modal-med').classList.remove('hidden'); };
 $('btn-cerrar-med').onclick = () => $('modal-med').classList.add('hidden');
 $('form-med').onsubmit = async (e) => {
   e.preventDefault();
-  const id = $('med-id').value;
-  const body = { nombre: $('med-nombre').value.trim(), gramaje: $('med-gramaje').value.trim() || null, descripcion: $('med-desc').value.trim(), cantidad_pastillas: Number($('med-cant').value), fecha_vencimiento: $('med-vence').value, categoria_id: $('med-cat').value || null, precio: Number($('med-precio').value), stock_minimo: Number($('med-min').value) };
-  if (id) await api('/api/medicamentos/' + id, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) });
-  else await api('/api/medicamentos', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
-  $('modal-med').classList.add('hidden'); toast('Medicamento guardado'); loadMeds();
+  try {
+    const id = $('med-id').value;
+    const body = { nombre: $('med-nombre').value.trim(), gramaje: $('med-gramaje').value.trim() || null, descripcion: $('med-desc').value.trim(), cantidad_pastillas: Number($('med-cant').value), fecha_vencimiento: $('med-vence').value, categoria_id: $('med-cat').value || null, precio: Number($('med-precio').value), stock_minimo: Number($('med-min').value) };
+    if (id) await api('/api/medicamentos/' + id, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) });
+    else await api('/api/medicamentos', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+    $('modal-med').classList.add('hidden'); toast('Medicamento guardado'); loadMeds();
+  } catch (err) { toast(err.message, false); }
 };
 window.editMed = (id) => {
+  if (!isAdmin()) { toast('Solo admin puede editar', false); return; }
   const m = state.meds.find((x) => x.id === id); if (!m) return;
   $('med-id').value = m.id; $('med-nombre').value = m.nombre; $('med-gramaje').value = m.gramaje || ''; $('med-desc').value = m.descripcion || '';
   $('med-cant').value = m.cantidad_pastillas; $('med-vence').value = m.fecha_vencimiento; $('med-cat').value = m.categoria_id || '';
   $('med-precio').value = m.precio; $('med-min').value = m.stock_minimo;
   $('med-modal-title').textContent = 'Editar medicamento'; $('modal-med').classList.remove('hidden');
 };
-window.delMed = async (id) => { if (!confirm('¿Eliminar medicamento y su historial?')) return; await api('/api/medicamentos/' + id, { method: 'DELETE', headers: authHeaders(false) }); toast('Eliminado'); loadMeds(); };
+window.delMed = async (id) => { if (!isAdmin()) { toast('Solo admin puede borrar', false); return; } if (!confirm('¿Eliminar medicamento y su historial?')) return; try { await api('/api/medicamentos/' + id, { method: 'DELETE', headers: authHeaders(false) }); toast('Eliminado'); loadMeds(); } catch (e) { toast(e.message, false); } };
 
 // stock
 window.openStock = (id, tipo) => { $('stock-id').value = id; $('stock-tipo').value = tipo; $('stock-title').textContent = tipo === 'entrada' ? 'Registrar entrada' : 'Registrar salida'; $('modal-stock').classList.remove('hidden'); };
@@ -251,12 +270,36 @@ async function loadRecetas() {
         <a class="btn btn-secondary !py-1 !text-xs" target="_blank" href="${API}/${r.archivo_path}">Ver archivo</a>
         <button class="btn btn-outline-green !py-1 !text-xs" onclick="setReceta(${r.id},'dispensada')">Dispensar</button>
         <button class="btn btn-outline-red !py-1 !text-xs" onclick="setReceta(${r.id},'rechazada')">Rechazar</button>
-        <button class="btn btn-destructive !py-1 !text-xs" onclick="delReceta(${r.id})">Borrar</button>
+        ${isAdmin() ? `<button class="btn btn-destructive !py-1 !text-xs" onclick="delReceta(${r.id})">Borrar</button>` : ''}
       </div>
     </div>`).join('') || '<p class="text-slate-500 text-sm">Sin recetas.</p>';
 }
-window.setReceta = async (id, estado) => { await api('/api/recetas/' + id, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ estado }) }); toast('Receta ' + estado); loadRecetas(); };
-window.delReceta = async (id) => { if (!confirm('¿Borrar receta?')) return; await api('/api/recetas/' + id, { method: 'DELETE', headers: authHeaders(false) }); loadRecetas(); };
+window.setReceta = async (id, estado) => { try { await api('/api/recetas/' + id, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ estado }) }); toast('Receta ' + estado); loadRecetas(); } catch (e) { toast(e.message, false); } };
+window.delReceta = async (id) => { if (!isAdmin()) { toast('Solo admin puede borrar recetas', false); return; } if (!confirm('¿Borrar receta?')) return; try { await api('/api/recetas/' + id, { method: 'DELETE', headers: authHeaders(false) }); loadRecetas(); } catch (e) { toast(e.message, false); } };
+
+// ---------- Usuarios (solo admin) ----------
+async function loadUsers() {
+  if (!isAdmin()) return;
+  const rows = await api('/api/auth/usuarios', { headers: authHeaders(false) }).catch((e) => { toast(e.message, false); return []; });
+  $('tbl-users').innerHTML = rows.map((u) => `
+    <tr><td><b>${u.nombre}</b></td><td class="text-xs">${u.email}</td>
+    <td><span class="badge ${u.rol === 'admin' ? 'badge-red' : 'badge-blue'}">${u.rol}</span></td>
+    <td><select class="select !w-36 !py-1 !text-xs" onchange="setUserRol(${u.id},this.value)">
+      <option value="">Cambiar rol…</option><option value="admin">admin</option><option value="farmaceutico">farmacéutico</option><option value="cajero">cajero</option>
+    </select></td></tr>`).join('') || '<tr><td colspan="4" class="text-center text-slate-500">Sin usuarios.</td></tr>';
+}
+$('form-user').onsubmit = async (e) => {
+  e.preventDefault();
+  try {
+    await api('/api/auth/usuarios', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ nombre: $('u-nombre').value.trim(), email: $('u-email').value.trim(), password: $('u-pass').value, rol: $('u-rol').value }) });
+    toast('Usuario creado'); $('form-user').reset(); loadUsers();
+  } catch (err) { toast(err.message, false); }
+};
+window.setUserRol = async (id, rol) => {
+  if (!rol) return;
+  try { await api('/api/auth/usuarios/' + id, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ rol }) }); toast('Rol actualizado'); loadUsers(); }
+  catch (e) { toast(e.message, false); }
+};
 
 // ---------- Modal alerta vencimiento ----------
 $('btn-alert-cerrar').onclick = () => $('modal-alert').classList.add('hidden');

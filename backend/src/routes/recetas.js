@@ -71,6 +71,7 @@ router.patch('/:id', async (req, res) => {
 });
 
 router.delete('/:id', async (req, res) => {
+  if (req.user?.rol !== 'admin') return res.status(403).json({ error: 'Solo admin puede borrar recetas' });
   const [[row]] = await pool.query('SELECT archivo_path FROM recetas WHERE id=?', [req.params.id]);
   await pool.query('DELETE FROM recetas WHERE id=?', [req.params.id]);
   if (row) {

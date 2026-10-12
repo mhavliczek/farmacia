@@ -5,16 +5,26 @@ const { signToken, authRequired } = require('../middleware/auth');
 
 const router = express.Router();
 
-// POST /api/auth/register
+function requireAdmin(req, res, next) {
+  if (req.user?.rol !== 'admin') return res.status(403).json({ error: 'Solo admin' });
+  next();
+}
+
+// POST /api/auth/register — PÚBLICO pero siempre crea farmaceutico/cajero, NUNCA admin.
+// El primer usuario del sistema sí puede ser admin (para el setup inicial).
 router.post('/register', async (req, res) => {
   const { nombre, email, password, rol } = req.body;
   if (!nombre || !email || !password) {
     return res.status(400).json({ error: 'nombre, email y password son obligatorios' });
   }
-  const rolFinal = ['admin', 'farmaceutico', 'cajero'].includes(rol) ? rol : 'farmaceutico';
   try {
     const [existe] = await pool.query('SELECT id FROM usuarios WHERE email = ?', [email]);
     if (existe.length) return res.status(409).json({ error: 'Email ya registrado' });
+    const [[{ total }]] = await pool.query('SELECT COUNT(*) AS total FROM usuarios');
+    // Solo el primer usuario puede autoproclamarse admin. Después, el rol pedido se ignora.
+    let rolFinal = 'farmaceutico';
+    if (total === 0 && rol === 'admin') rolFinal = 'admin';
+    else if (['farmaceutico', 'cajero'].includes(rol)) rolFinal = rol;
     const hash = await bcrypt.hash(password, 10);
     const [r] = await pool.query(
       'INSERT INTO usuarios (nombre, email, password_hash, rol) VALUES (?,?,?,?)',
@@ -54,10 +64,34 @@ router.get('/me', authRequired, async (req, res) => {
 });
 
 // GET /api/auth/usuarios (solo admin)
-router.get('/usuarios', authRequired, async (req, res) => {
-  if (req.user.rol !== 'admin') return res.status(403).json({ error: 'Solo admin' });
+router.get('/usuarios', authRequired, requireAdmin, async (_req, res) => {
   const [rows] = await pool.query('SELECT id, nombre, email, rol, activo, creado_en FROM usuarios ORDER BY id DESC');
   res.json(rows);
+});
+
+// POST /api/auth/usuarios (solo admin crea usuarios con cualquier rol)
+router.post('/usuarios', authRequired, requireAdmin, async (req, res) => {
+  const { nombre, email, password, rol } = req.body;
+  if (!nombre || !email || !password) return res.status(400).json({ error: 'nombre, email y password requeridos' });
+  const rolFinal = ['admin', 'farmaceutico', 'cajero'].includes(rol) ? rol : 'farmaceutico';
+  try {
+    const [existe] = await pool.query('SELECT id FROM usuarios WHERE email = ?', [email]);
+    if (existe.length) return res.status(409).json({ error: 'Email ya registrado' });
+    const hash = await bcrypt.hash(password, 10);
+    const [r] = await pool.query('INSERT INTO usuarios (nombre, email, password_hash, rol) VALUES (?,?,?,?)', [nombre, email, hash, rolFinal]);
+    res.status(201).json({ id: r.insertId, nombre, email, rol: rolFinal });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Error al crear usuario' });
+  }
+});
+
+// PATCH /api/auth/usuarios/:id (solo admin cambia rol/activo)
+router.patch('/usuarios/:id', authRequired, requireAdmin, async (req, res) => {
+  const { rol, activo } = req.body;
+  if (rol && !['admin', 'farmaceutico', 'cajero'].includes(rol)) return res.status(400).json({ error: 'rol inválido' });
+  await pool.query('UPDATE usuarios SET rol=COALESCE(?,rol), activo=COALESCE(?,activo) WHERE id=?', [rol || null, activo ?? null, req.params.id]);
+  res.json({ ok: true });
 });
 
 module.exports = router;

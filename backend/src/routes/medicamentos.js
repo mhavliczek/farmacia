@@ -5,6 +5,11 @@ const { authRequired } = require('../middleware/auth');
 const router = express.Router();
 router.use(authRequired);
 
+function requireAdmin(req, res, next) {
+  if (req.user?.rol !== 'admin') return res.status(403).json({ error: 'Solo admin puede gestionar medicamentos' });
+  next();
+}
+
 // GET /api/medicamentos?q=&categoria_id=&vencidos=1&bajo_stock=1
 router.get('/', async (req, res) => {
   const { q, categoria_id, vencidos, bajo_stock } = req.query;
@@ -35,8 +40,8 @@ router.get('/:id', async (req, res) => {
   res.json(rows[0]);
 });
 
-// POST /api/medicamentos
-router.post('/', async (req, res) => {
+// POST /api/medicamentos — solo admin registra medicamentos
+router.post('/', requireAdmin, async (req, res) => {
   const { nombre, gramaje, descripcion, cantidad_pastillas, fecha_vencimiento, categoria_id, precio, stock_minimo } = req.body;
   if (!nombre || cantidad_pastillas == null || !fecha_vencimiento) {
     return res.status(400).json({ error: 'nombre, cantidad_pastillas y fecha_vencimiento son obligatorios' });
@@ -62,8 +67,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /api/medicamentos/:id
-router.put('/:id', async (req, res) => {
+// PUT /api/medicamentos/:id — solo admin edita
+router.put('/:id', requireAdmin, async (req, res) => {
   const { nombre, gramaje, descripcion, fecha_vencimiento, categoria_id, precio, stock_minimo } = req.body;
   await pool.query(
     `UPDATE medicamentos SET nombre=COALESCE(?,nombre), gramaje=?, descripcion=?, fecha_vencimiento=COALESCE(?,fecha_vencimiento),
@@ -74,7 +79,7 @@ router.put('/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAdmin, async (req, res) => {
   await pool.query('DELETE FROM medicamentos WHERE id=?', [req.params.id]);
   res.json({ ok: true });
 });

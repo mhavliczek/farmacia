@@ -5,12 +5,17 @@ const { authRequired } = require('../middleware/auth');
 const router = express.Router();
 router.use(authRequired);
 
+function requireAdmin(req, res, next) {
+  if (req.user?.rol !== 'admin') return res.status(403).json({ error: 'Solo admin' });
+  next();
+}
+
 router.get('/', async (_req, res) => {
   const [rows] = await pool.query('SELECT * FROM categorias ORDER BY nombre');
   res.json(rows);
 });
 
-router.post('/', async (req, res) => {
+router.post('/', requireAdmin, async (req, res) => {
   const { nombre, descripcion } = req.body;
   if (!nombre) return res.status(400).json({ error: 'nombre requerido' });
   try {
@@ -22,7 +27,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAdmin, async (req, res) => {
   await pool.query('DELETE FROM categorias WHERE id = ?', [req.params.id]);
   res.json({ ok: true });
 });

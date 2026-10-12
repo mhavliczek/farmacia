@@ -57,9 +57,10 @@ tailwind.config = { darkMode: 'class', theme: { extend: {
     </form>
     <form id="form-register" class="space-y-4 hidden">
       <div><label class="lbl">Nombre</label><input id="reg-nombre" class="input" placeholder="Tu nombre" required /></div>
-      <div><label class="lbl">Email</label><input id="reg-email" class="input" type="email" placeholder="admin@farmacia.cl" required /></div>
+      <div><label class="lbl">Email</label><input id="reg-email" class="input" type="email" placeholder="usuario@farmacia.cl" required /></div>
       <div><label class="lbl">Contraseña</label><input id="reg-pass" class="input" type="password" minlength="6" placeholder="Mínimo 6 caracteres" required /></div>
-      <div><label class="lbl">Rol</label><select id="reg-rol" class="select"><option value="admin">Admin</option><option value="farmaceutico" selected>Farmacéutico</option><option value="cajero">Cajero</option></select></div>
+      <div><label class="lbl">Rol</label><select id="reg-rol" class="select"><option value="farmaceutico" selected>Farmacéutico</option><option value="cajero">Cajero</option></select></div>
+      <p class="text-xs text-slate-500">El registro público crea rol farmacéutico/cajero. Solo el primer usuario puede ser admin, los demás admins los crea un admin en Usuarios.</p>
       <button class="btn btn-primary w-full">Crear cuenta</button>
     </form>
     <p id="auth-error" class="text-sm text-red-600 mt-3 hidden"></p>
@@ -74,7 +75,8 @@ tailwind.config = { darkMode: 'class', theme: { extend: {
     <div class="sidebar-link" data-view="medicamentos">💉 Medicamentos</div>
     <div class="sidebar-link" data-view="inventario">📦 Entradas / Salidas</div>
     <div class="sidebar-link" data-view="recetas">📄 Recetas médicas</div>
-    <div class="sidebar-link" data-view="categorias">🏷️ Categorías</div>
+    <div class="sidebar-link admin-only" data-view="categorias">🏷️ Categorías</div>
+    <div class="sidebar-link admin-only" data-view="usuarios">👥 Usuarios</div>
     <div class="mt-auto pt-4 border-t">
       <div class="px-2 text-sm"><div id="user-nombre" class="font-medium"></div><div id="user-email" class="text-xs text-slate-500"></div></div>
       <button id="btn-logout" class="btn btn-secondary w-full mt-2">Cerrar sesión</button>
@@ -108,8 +110,8 @@ tailwind.config = { darkMode: 'class', theme: { extend: {
     <!-- MEDICAMENTOS -->
     <section id="sec-medicamentos" class="hidden">
       <div class="flex flex-wrap items-center gap-3 mb-4">
-        <div><h2 class="text-2xl font-semibold tracking-tight">Medicamentos</h2><p class="text-sm text-slate-500">Nombre, gramaje, descripción, cantidad, vencimiento y categoría.</p></div>
-        <button id="btn-nuevo-med" class="btn btn-primary ml-auto">+ Nuevo medicamento</button>
+        <div><h2 class="text-2xl font-semibold tracking-tight">Medicamentos</h2><p class="text-sm text-slate-500">Nombre, gramaje, descripción, cantidad, vencimiento y categoría. <span class="admin-only">Solo admin puede crear/editar/borrar.</span> Entradas y salidas disponibles para todos.</p></div>
+        <button id="btn-nuevo-med" class="btn btn-primary ml-auto admin-only">+ Nuevo medicamento</button>
       </div>
       <div class="card p-4 mb-4 flex flex-wrap gap-3">
         <input id="f-q" class="input !w-64" placeholder="🔍 Buscar por nombre..." />
@@ -160,14 +162,31 @@ tailwind.config = { darkMode: 'class', theme: { extend: {
     <!-- CATEGORIAS -->
     <section id="sec-categorias" class="hidden">
       <h2 class="text-2xl font-semibold tracking-tight">Categorías</h2>
-      <p class="text-sm text-slate-500 mb-4">Agrupan los medicamentos.</p>
+      <p class="text-sm text-slate-500 mb-4">Agrupan los medicamentos. Solo admin puede crear/eliminar.</p>
       <div class="grid lg:grid-cols-3 gap-4">
-        <form id="form-cat" class="card p-5 space-y-3 h-fit"><h3 class="font-medium">Nueva categoría</h3>
+        <form id="form-cat" class="card p-5 space-y-3 h-fit admin-only"><h3 class="font-medium">Nueva categoría</h3>
           <div><label class="lbl">Nombre *</label><input id="c-nombre" class="input" required /></div>
           <div><label class="lbl">Descripción</label><input id="c-desc" class="input" /></div>
           <button class="btn btn-primary w-full">Guardar</button>
         </form>
         <div class="lg:col-span-2 card p-5"><div id="list-cats" class="flex flex-wrap gap-2"></div></div>
+      </div>
+    </section>
+
+    <!-- USUARIOS (solo admin) -->
+    <section id="sec-usuarios" class="hidden">
+      <h2 class="text-2xl font-semibold tracking-tight">Usuarios</h2>
+      <p class="text-sm text-slate-500 mb-4">Solo el admin crea usuarios con rol y cambia roles. El registro público ya no crea admins.</p>
+      <div class="grid lg:grid-cols-3 gap-4">
+        <form id="form-user" class="card p-5 space-y-3 h-fit">
+          <h3 class="font-medium">Crear usuario</h3>
+          <div><label class="lbl">Nombre *</label><input id="u-nombre" class="input" required /></div>
+          <div><label class="lbl">Email *</label><input id="u-email" class="input" type="email" required /></div>
+          <div><label class="lbl">Contraseña *</label><input id="u-pass" class="input" type="password" minlength="6" required /></div>
+          <div><label class="lbl">Rol</label><select id="u-rol" class="select"><option value="farmaceutico">Farmacéutico</option><option value="cajero">Cajero</option><option value="admin">Admin</option></select></div>
+          <button class="btn btn-primary w-full">Crear</button>
+        </form>
+        <div class="lg:col-span-2 card p-5 overflow-x-auto"><table class="tbl"><thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Acción</th></tr></thead><tbody id="tbl-users"></tbody></table></div>
       </div>
     </section>
   </main>
