@@ -106,7 +106,7 @@ tailwind.config = { darkMode: 'class', theme: { extend: {
       </div>
       <div class="grid lg:grid-cols-2 gap-4">
         <div class="card p-5"><h3 class="font-medium mb-3">Próximos a vencer</h3><div id="list-vencer" class="space-y-2 text-sm"></div></div>
-        <div class="card p-5"><h3 class="font-medium mb-3">Últimos movimientos</h3><div id="list-movs" class="space-y-2 text-sm"></div></div>
+        <div class="card p-5"><div class="flex items-center justify-between mb-3"><h3 class="font-medium">Últimos movimientos</h3><button id="btn-limpiar-dash" class="btn btn-outline-red !py-1 !text-xs admin-only">Limpiar historial</button></div><div id="list-movs" class="space-y-2 text-sm"></div></div>
       </div>
     </section>
 
@@ -124,7 +124,7 @@ tailwind.config = { darkMode: 'class', theme: { extend: {
         <button id="btn-filtrar" class="btn btn-secondary">Filtrar</button>
       </div>
       <div class="card overflow-x-auto"><table class="tbl"><thead><tr>
-        <th>Medicamento</th><th>Gramaje</th><th>Categoría</th><th>Cantidad</th><th>Vencimiento</th><th>Precio</th><th>Acciones</th>
+        <th>Medicamento</th><th>Gramaje</th><th>Categoría</th><th>Cantidad</th><th>Vencimiento</th><th>Acciones</th>
       </tr></thead><tbody id="tbl-meds"></tbody></table></div>
     </section>
 
@@ -135,6 +135,7 @@ tailwind.config = { darkMode: 'class', theme: { extend: {
       <div class="card p-4 mb-4 flex flex-wrap gap-3">
         <select id="m-tipo" class="select !w-44"><option value="">Entradas + salidas</option><option value="entrada">Solo entradas</option><option value="salida">Solo salidas</option></select>
         <button id="btn-movs" class="btn btn-secondary">Actualizar</button>
+        <button id="btn-limpiar-movs" class="btn btn-destructive admin-only ml-auto">Limpiar historial</button>
       </div>
       <div class="card overflow-x-auto"><table class="tbl"><thead><tr><th>Fecha</th><th>Medicamento</th><th>Tipo</th><th>Cant.</th><th>Motivo</th><th>Usuario</th></tr></thead><tbody id="tbl-movs"></tbody></table></div>
     </section>
@@ -220,9 +221,8 @@ tailwind.config = { darkMode: 'class', theme: { extend: {
     </div>
     <div><label class="lbl">Descripción</label><textarea id="med-desc" class="textarea" rows="2"></textarea></div>
     <div class="grid grid-cols-2 gap-3">
-      <div><label class="lbl">Cantidad (pastillas) *</label><input id="med-cant" class="input" type="number" min="0" value="0" required /></div>
+      <div><label class="lbl">Cantidad (pastillas) *</label><input id="med-cant" class="input" type="number" min="0" value="0" required /><p id="med-cant-hint" class="text-xs text-slate-500 hidden">Para cambiar el stock usa Entrada / Salida.</p></div>
       <div><label class="lbl">Fecha vencimiento *</label><input id="med-vence" class="input" type="date" required /></div>
-      <div><label class="lbl">Precio</label><input id="med-precio" class="input" type="number" min="0" step="0.01" value="0" /></div>
       <div><label class="lbl">Stock mínimo</label><input id="med-min" class="input" type="number" min="0" value="10" /></div>
     </div>
     <div class="flex gap-2 pt-2"><button type="submit" class="btn btn-primary flex-1">Guardar</button><button type="button" id="btn-cerrar-med" class="btn btn-secondary">Cancelar</button></div>

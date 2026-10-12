@@ -4,7 +4,7 @@ Sistema completo con **MySQL + Node/Express + Frontend estilo shadcn**.
 
 ## Funciones
 - **Login** con tabla `usuarios` (roles: admin, farmaceutico, cajero). Contraseñas con bcrypt + JWT.
-- **Medicamentos**: nombre, gramaje (Ej: 500mg, 1g), descripción, cantidad (pastillas), fecha de vencimiento, categoría, precio, stock mínimo.
+- **Medicamentos**: nombre, gramaje (Ej: 500mg, 1g), descripción, cantidad (pastillas), fecha de vencimiento, categoría, stock mínimo.
 - **Inventario**: entradas y salidas con validación de stock y bloqueo si está vencido. Tabla `movimientos` (kardex).
 - **Recetas médicas**: subida de JPG/PNG/WEBP/PDF (10 MB), estados pendiente/dispensada/rechazada.
 - **Dashboard**: totales, bajo stock, vencidos, próximos a vencer.
@@ -55,7 +55,7 @@ npm run dev
 - `POST /api/auth/login` {email, password} → {user, token}
 - `GET /api/categorias` / `POST /api/categorias`
 - `GET /api/medicamentos?q=&categoria_id=&vencidos=1&bajo_stock=1`
-- `POST /api/medicamentos` {nombre, descripcion, cantidad_pastillas, fecha_vencimiento, categoria_id, precio, stock_minimo}
+- `POST /api/medicamentos` {nombre, descripcion, cantidad_pastillas, fecha_vencimiento, categoria_id, stock_minimo}
 - `POST /api/medicamentos/:id/entrada` {cantidad, motivo}
 - `POST /api/medicamentos/:id/salida` {cantidad, motivo}
 - `GET /api/movimientos?tipo=entrada`

@@ -23,6 +23,20 @@ router.get('/', async (req, res) => {
   res.json(rows);
 });
 
+// DELETE /api/movimientos — solo admin. Borra el historial (kardex). NO modifica el stock.
+router.delete('/', (req, res, next) => {
+  if (req.user?.rol !== 'admin') return res.status(403).json({ error: 'Solo admin puede limpiar movimientos' });
+  next();
+}, async (_req, res) => {
+  try {
+    const [r] = await pool.query('DELETE FROM movimientos');
+    res.json({ ok: true, eliminados: r.affectedRows });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Error al limpiar movimientos' });
+  }
+});
+
 // GET /api/dashboard/resumen
 router.get('/resumen', async (_req, res) => {
   const [[totales]] = await pool.query(`

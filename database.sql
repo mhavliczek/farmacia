@@ -32,7 +32,6 @@ CREATE TABLE IF NOT EXISTS medicamentos (
   cantidad_pastillas INT NOT NULL DEFAULT 0 CHECK (cantidad_pastillas >= 0),
   fecha_vencimiento DATE NOT NULL,
   categoria_id INT NULL,
-  precio DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   stock_minimo INT NOT NULL DEFAULT 10,
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -99,9 +98,12 @@ ON DUPLICATE KEY UPDATE nombre=VALUES(nombre);
 -- Usuario admin: regístrate desde el frontend o vía API:
 -- POST /api/auth/register { "nombre":"Administrador", "email":"admin@farmacia.cl", "password":"admin123", "rol":"admin" }
 
-INSERT INTO medicamentos (nombre, gramaje, descripcion, cantidad_pastillas, fecha_vencimiento, categoria_id, precio, stock_minimo) VALUES
-('Paracetamol','500mg','Analgésico y antipirético. Caja x 20 comprimidos.',500, DATE_ADD(CURDATE(), INTERVAL 18 MONTH), 1, 1990.00, 50),
-('Ibuprofeno','400mg','Antiinflamatorio no esteroideo.',300, DATE_ADD(CURDATE(), INTERVAL 12 MONTH), 3, 2490.00, 30),
-('Amoxicilina','500mg','Antibiótico de amplio espectro. Requiere receta.',150, DATE_ADD(CURDATE(), INTERVAL 10 MONTH), 2, 4990.00, 20),
-('Vitamina C','1g','Suplemento efervescente x 10 tabletas.',200, DATE_ADD(CURDATE(), INTERVAL 24 MONTH), 4, 3490.00, 25),
-('Losartán','50mg','Antihipertensivo. Requiere receta.',120, DATE_ADD(CURDATE(), INTERVAL 8 MONTH), 5, 5990.00, 15);
+INSERT INTO medicamentos (nombre, gramaje, descripcion, cantidad_pastillas, fecha_vencimiento, categoria_id, stock_minimo) VALUES
+('Paracetamol','500mg','Analgésico y antipirético. Caja x 20 comprimidos.',500, DATE_ADD(CURDATE(), INTERVAL 18 MONTH), 1, 50),
+('Ibuprofeno','400mg','Antiinflamatorio no esteroideo.',300, DATE_ADD(CURDATE(), INTERVAL 12 MONTH), 3, 30),
+('Amoxicilina','500mg','Antibiótico de amplio espectro. Requiere receta.',150, DATE_ADD(CURDATE(), INTERVAL 10 MONTH), 2, 20),
+('Vitamina C','1g','Suplemento efervescente x 10 tabletas.',200, DATE_ADD(CURDATE(), INTERVAL 24 MONTH), 4, 25),
+('Losartán','50mg','Antihipertensivo. Requiere receta.',120, DATE_ADD(CURDATE(), INTERVAL 8 MONTH), 5, 15);
+
+-- Bases ya creadas con la columna precio: eliminarla manualmente
+-- ALTER TABLE medicamentos DROP COLUMN precio;

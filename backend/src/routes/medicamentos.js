@@ -42,16 +42,16 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/medicamentos — solo admin registra medicamentos
 router.post('/', requireAdmin, async (req, res) => {
-  const { nombre, gramaje, descripcion, cantidad_pastillas, fecha_vencimiento, categoria_id, precio, stock_minimo } = req.body;
+  const { nombre, gramaje, descripcion, cantidad_pastillas, fecha_vencimiento, categoria_id, stock_minimo } = req.body;
   if (!nombre || cantidad_pastillas == null || !fecha_vencimiento) {
     return res.status(400).json({ error: 'nombre, cantidad_pastillas y fecha_vencimiento son obligatorios' });
   }
   try {
     const [r] = await pool.query(
-      `INSERT INTO medicamentos (nombre, gramaje, descripcion, cantidad_pastillas, fecha_vencimiento, categoria_id, precio, stock_minimo)
-       VALUES (?,?,?,?,?,?,?,?)`,
+      `INSERT INTO medicamentos (nombre, gramaje, descripcion, cantidad_pastillas, fecha_vencimiento, categoria_id, stock_minimo)
+       VALUES (?,?,?,?,?,?,?)`,
       [nombre, gramaje || null, descripcion || null, Number(cantidad_pastillas), fecha_vencimiento,
-       categoria_id || null, Number(precio || 0), Number(stock_minimo ?? 10)]
+       categoria_id || null, Number(stock_minimo ?? 10)]
     );
     // registrar entrada inicial como movimiento
     if (Number(cantidad_pastillas) > 0) {
@@ -68,15 +68,22 @@ router.post('/', requireAdmin, async (req, res) => {
 });
 
 // PUT /api/medicamentos/:id — solo admin edita
+// El stock (cantidad_pastillas) no se edita aquí: se modifica solo con entrada/salida para mantener el kardex.
 router.put('/:id', requireAdmin, async (req, res) => {
-  const { nombre, gramaje, descripcion, fecha_vencimiento, categoria_id, precio, stock_minimo } = req.body;
-  await pool.query(
-    `UPDATE medicamentos SET nombre=COALESCE(?,nombre), gramaje=?, descripcion=?, fecha_vencimiento=COALESCE(?,fecha_vencimiento),
-     categoria_id=?, precio=COALESCE(?,precio), stock_minimo=COALESCE(?,stock_minimo) WHERE id=?`,
-    [nombre || null, gramaje ?? null, descripcion ?? null, fecha_vencimiento || null, categoria_id || null,
-     precio ?? null, stock_minimo ?? null, req.params.id]
-  );
-  res.json({ ok: true });
+  const { nombre, gramaje, descripcion, fecha_vencimiento, categoria_id, stock_minimo } = req.body;
+  try {
+    const [r] = await pool.query(
+      `UPDATE medicamentos SET nombre=COALESCE(?,nombre), gramaje=?, descripcion=?, fecha_vencimiento=COALESCE(?,fecha_vencimiento),
+       categoria_id=?, stock_minimo=COALESCE(?,stock_minimo) WHERE id=?`,
+      [nombre || null, gramaje ?? null, descripcion ?? null, fecha_vencimiento || null, categoria_id || null,
+       stock_minimo ?? null, req.params.id]
+    );
+    if (!r.affectedRows) return res.status(404).json({ error: 'Medicamento no existe' });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Error al editar medicamento' });
+  }
 });
 
 router.delete('/:id', requireAdmin, async (req, res) => {

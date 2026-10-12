@@ -20,7 +20,6 @@ async function api(path, opts = {}) {
   return data;
 }
 const fmtFecha = (f) => (!f ? '—' : new Date(f + 'T00:00:00').toLocaleDateString('es-CL'));
-const fmtMoney = (n) => '$' + Number(n || 0).toLocaleString('es-CL');
 
 // ---------- Auth ----------
 $('tab-login').onclick = () => { $('form-login').classList.remove('hidden'); $('form-register').classList.add('hidden'); $('tab-login').className = 'btn btn-primary flex-1'; $('tab-register').className = 'btn flex-1'; };
@@ -184,13 +183,12 @@ async function loadMeds() {
       <td><span class="badge badge-blue">${m.categoria_nombre || '—'}</span></td>
       <td>${stock}<div class="text-xs text-slate-400">pastillas</div></td>
       <td>${fmtFecha(m.fecha_vencimiento)} ${venc}</td>
-      <td>${fmtMoney(m.precio)}</td>
       <td><div class="flex flex-wrap gap-1">
         <button class="btn btn-outline-green !px-2 !py-1 !text-xs" onclick="openStock(${m.id},'entrada')">+ Entrada</button>
         <button class="btn btn-outline-red !px-2 !py-1 !text-xs" onclick="openStock(${m.id},'salida')">− Salida</button>
         ${adminBtns}
       </div></td></tr>`;
-  }).join('') || '<tr><td colspan="7" class="text-center text-slate-500 py-6">Sin medicamentos.</td></tr>';
+  }).join('') || '<tr><td colspan="6" class="text-center text-slate-500 py-6">Sin medicamentos.</td></tr>';
 }
 $('btn-nuevo-med').onclick = () => { if (!isAdmin()) { toast('Solo admin puede crear medicamentos', false); return; } $('form-med').reset(); $('med-id').value = ''; $('med-modal-title').textContent = 'Nuevo medicamento'; $('modal-med').classList.remove('hidden'); };
 $('btn-cerrar-med').onclick = () => $('modal-med').classList.add('hidden');
@@ -198,7 +196,7 @@ $('form-med').onsubmit = async (e) => {
   e.preventDefault();
   try {
     const id = $('med-id').value;
-    const body = { nombre: $('med-nombre').value.trim(), gramaje: $('med-gramaje').value.trim() || null, descripcion: $('med-desc').value.trim(), cantidad_pastillas: Number($('med-cant').value), fecha_vencimiento: $('med-vence').value, categoria_id: $('med-cat').value || null, precio: Number($('med-precio').value), stock_minimo: Number($('med-min').value) };
+    const body = { nombre: $('med-nombre').value.trim(), gramaje: $('med-gramaje').value.trim() || null, descripcion: $('med-desc').value.trim(), cantidad_pastillas: Number($('med-cant').value), fecha_vencimiento: $('med-vence').value, categoria_id: $('med-cat').value || null, stock_minimo: Number($('med-min').value) };
     if (id) await api('/api/medicamentos/' + id, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) });
     else await api('/api/medicamentos', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
     $('modal-med').classList.add('hidden'); toast('Medicamento guardado'); loadMeds();
@@ -206,12 +204,17 @@ $('form-med').onsubmit = async (e) => {
 };
 window.editMed = (id) => {
   if (!isAdmin()) { toast('Solo admin puede editar', false); return; }
-  const m = state.meds.find((x) => x.id === id); if (!m) return;
+  const m = state.meds.find((x) => x.id === Number(id));
+  if (!m) { toast('Medicamento no encontrado, recarga la lista', false); return; }
   $('med-id').value = m.id; $('med-nombre').value = m.nombre; $('med-gramaje').value = m.gramaje || ''; $('med-desc').value = m.descripcion || '';
-  $('med-cant').value = m.cantidad_pastillas; $('med-vence').value = m.fecha_vencimiento; $('med-cat').value = m.categoria_id || '';
-  $('med-precio').value = m.precio; $('med-min').value = m.stock_minimo;
+  $('med-cant').value = m.cantidad_pastillas; $('med-cant').readOnly = true; $('med-cant-hint').classList.remove('hidden');
+  $('med-vence').value = String(m.fecha_vencimiento).slice(0, 10); $('med-cat').value = m.categoria_id || '';
+  $('med-min').value = m.stock_minimo;
   $('med-modal-title').textContent = 'Editar medicamento'; $('modal-med').classList.remove('hidden');
 };
+function resetMedForm() { $('med-cant').readOnly = false; $('med-cant-hint').classList.add('hidden'); }
+$('btn-nuevo-med').addEventListener('click', resetMedForm);
+$('btn-cerrar-med').addEventListener('click', resetMedForm);
 window.delMed = async (id) => { if (!isAdmin()) { toast('Solo admin puede borrar', false); return; } if (!confirm('¿Eliminar medicamento y su historial?')) return; try { await api('/api/medicamentos/' + id, { method: 'DELETE', headers: authHeaders(false) }); toast('Eliminado'); loadMeds(); } catch (e) { toast(e.message, false); } };
 
 // stock
@@ -237,6 +240,18 @@ async function loadMovs() {
     <td><b>x${m.cantidad}</b></td><td class="text-slate-500">${m.motivo || '—'}</td><td class="text-xs">${m.usuario_nombre || '—'}</td></tr>`
   ).join('') || '<tr><td colspan="6" class="text-center text-slate-500 py-6">Sin movimientos.</td></tr>';
 }
+
+async function limpiarMovimientos() {
+  if (!isAdmin()) { toast('Solo admin puede limpiar movimientos', false); return; }
+  if (!confirm('¿Borrar todo el historial de movimientos? El stock de los medicamentos no cambia.')) return;
+  try {
+    const r = await api('/api/movimientos', { method: 'DELETE', headers: authHeaders(false) });
+    toast(`Historial limpiado (${r.eliminados} registros)`);
+    loadDashboard(); loadMovs();
+  } catch (e) { toast(e.message, false); }
+}
+$('btn-limpiar-movs').onclick = limpiarMovimientos;
+$('btn-limpiar-dash').onclick = limpiarMovimientos;
 
 // ---------- Recetas ----------
 $('btn-recetas').onclick = loadRecetas;
