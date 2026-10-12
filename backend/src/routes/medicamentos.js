@@ -67,22 +67,40 @@ router.post('/', requireAdmin, async (req, res) => {
   }
 });
 
-// PUT /api/medicamentos/:id — solo admin edita
-// El stock (cantidad_pastillas) no se edita aquí: se modifica solo con entrada/salida para mantener el kardex.
+// PUT /api/medicamentos/:id — solo admin edita.
+// Si cambia cantidad_pastillas, la diferencia se registra como movimiento de ajuste (kardex).
 router.put('/:id', requireAdmin, async (req, res) => {
-  const { nombre, gramaje, descripcion, fecha_vencimiento, categoria_id, stock_minimo } = req.body;
+  const { nombre, gramaje, descripcion, fecha_vencimiento, categoria_id, stock_minimo, cantidad_pastillas } = req.body;
+  const nuevaCant = cantidad_pastillas == null || cantidad_pastillas === '' ? null : Number(cantidad_pastillas);
+  if (nuevaCant !== null && (!Number.isInteger(nuevaCant) || nuevaCant < 0)) {
+    return res.status(400).json({ error: 'cantidad_pastillas debe ser un entero >= 0' });
+  }
+  const conn = await pool.getConnection();
   try {
-    const [r] = await pool.query(
+    await conn.beginTransaction();
+    const [[actual]] = await conn.query('SELECT cantidad_pastillas FROM medicamentos WHERE id=? FOR UPDATE', [req.params.id]);
+    if (!actual) { await conn.rollback(); return res.status(404).json({ error: 'Medicamento no existe' }); }
+    await conn.query(
       `UPDATE medicamentos SET nombre=COALESCE(?,nombre), gramaje=?, descripcion=?, fecha_vencimiento=COALESCE(?,fecha_vencimiento),
-       categoria_id=?, stock_minimo=COALESCE(?,stock_minimo) WHERE id=?`,
+       categoria_id=?, stock_minimo=COALESCE(?,stock_minimo), cantidad_pastillas=COALESCE(?,cantidad_pastillas) WHERE id=?`,
       [nombre || null, gramaje ?? null, descripcion ?? null, fecha_vencimiento || null, categoria_id || null,
-       stock_minimo ?? null, req.params.id]
+       stock_minimo ?? null, nuevaCant, req.params.id]
     );
-    if (!r.affectedRows) return res.status(404).json({ error: 'Medicamento no existe' });
+    const diff = nuevaCant === null ? 0 : nuevaCant - actual.cantidad_pastillas;
+    if (diff !== 0) {
+      await conn.query(
+        'INSERT INTO movimientos (medicamento_id, tipo, cantidad, motivo, usuario_id) VALUES (?, ?, ?, ?, ?)',
+        [req.params.id, diff > 0 ? 'entrada' : 'salida', Math.abs(diff), 'Ajuste manual de cantidad', req.user.id]
+      );
+    }
+    await conn.commit();
     res.json({ ok: true });
   } catch (e) {
+    await conn.rollback();
     console.error(e);
     res.status(500).json({ error: 'Error al editar medicamento' });
+  } finally {
+    conn.release();
   }
 });
 

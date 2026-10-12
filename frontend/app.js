@@ -207,14 +207,11 @@ window.editMed = (id) => {
   const m = state.meds.find((x) => x.id === Number(id));
   if (!m) { toast('Medicamento no encontrado, recarga la lista', false); return; }
   $('med-id').value = m.id; $('med-nombre').value = m.nombre; $('med-gramaje').value = m.gramaje || ''; $('med-desc').value = m.descripcion || '';
-  $('med-cant').value = m.cantidad_pastillas; $('med-cant').readOnly = true; $('med-cant-hint').classList.remove('hidden');
+  $('med-cant').value = m.cantidad_pastillas;
   $('med-vence').value = String(m.fecha_vencimiento).slice(0, 10); $('med-cat').value = m.categoria_id || '';
   $('med-min').value = m.stock_minimo;
   $('med-modal-title').textContent = 'Editar medicamento'; $('modal-med').classList.remove('hidden');
 };
-function resetMedForm() { $('med-cant').readOnly = false; $('med-cant-hint').classList.add('hidden'); }
-$('btn-nuevo-med').addEventListener('click', resetMedForm);
-$('btn-cerrar-med').addEventListener('click', resetMedForm);
 window.delMed = async (id) => { if (!isAdmin()) { toast('Solo admin puede borrar', false); return; } if (!confirm('¿Eliminar medicamento y su historial?')) return; try { await api('/api/medicamentos/' + id, { method: 'DELETE', headers: authHeaders(false) }); toast('Eliminado'); loadMeds(); } catch (e) { toast(e.message, false); } };
 
 // stock
