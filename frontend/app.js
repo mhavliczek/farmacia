@@ -141,15 +141,44 @@ async function loadCats() {
   $('f-cat').innerHTML = '<option value="">Todas las categorías</option>' + cats.map((c) => `<option value="${c.id}">${c.nombre}</option>`).join('');
   $('med-cat').innerHTML = '<option value="">— Sin categoría —</option>' + cats.map((c) => `<option value="${c.id}">${c.nombre}</option>`).join('');
   $('list-cats').innerHTML = cats.map((c) =>
-    `<div class="badge badge-gray !text-sm !py-1.5 !px-3">${c.nombre} ${isAdmin() ? `<button class="ml-1 text-red-600" onclick="delCat(${c.id})">✕</button>` : ''}</div>`
+    `<div class="badge badge-gray !text-sm !py-1.5 !px-3">${c.nombre}${isAdmin() ? ` <button class="ml-2 text-slate-700 underline" onclick="editCat(${c.id})">editar</button> <button class="ml-1 text-red-600" onclick="delCat(${c.id})">✕</button>` : ''}</div>`
   ).join('') || '<p class="text-slate-500 text-sm">Sin categorías.</p>';
 }
+let catEditId = null;
+function resetCatForm() {
+  catEditId = null;
+  $('form-cat').reset();
+  $('form-cat-title').textContent = 'Nueva categoría';
+  $('form-cat-submit').textContent = 'Guardar';
+  $('btn-cancel-cat').classList.add('hidden');
+}
+window.editCat = (id) => {
+  if (!isAdmin()) { toast('Solo admin puede editar', false); return; }
+  const c = state.cats.find((x) => x.id === Number(id));
+  if (!c) { toast('Categoría no encontrada, recarga la lista', false); return; }
+  catEditId = c.id;
+  $('c-nombre').value = c.nombre;
+  $('c-desc').value = c.descripcion || '';
+  $('form-cat-title').textContent = 'Editar categoría';
+  $('form-cat-submit').textContent = 'Actualizar';
+  $('btn-cancel-cat').classList.remove('hidden');
+  $('c-nombre').focus();
+};
+$('btn-cancel-cat').onclick = resetCatForm;
 $('form-cat').onsubmit = async (e) => {
   e.preventDefault();
+  const body = JSON.stringify({ nombre: $('c-nombre').value.trim(), descripcion: $('c-desc').value.trim() });
   try {
-    await api('/api/categorias', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ nombre: $('c-nombre').value.trim(), descripcion: $('c-desc').value.trim() }) });
-    $('c-nombre').value = ''; $('c-desc').value = '';
-    toast('Categoría creada'); loadCats();
+    if (catEditId) {
+      await api('/api/categorias/' + catEditId, { method: 'PUT', headers: authHeaders(), body });
+      toast('Categoría actualizada');
+    } else {
+      await api('/api/categorias', { method: 'POST', headers: authHeaders(), body });
+      toast('Categoría creada');
+    }
+    resetCatForm();
+    await loadCats();
+    await loadMeds();
   } catch (err) { toast(err.message, false); }
 };
 window.delCat = async (id) => { if (!confirm('¿Eliminar categoría?')) return; try { await api('/api/categorias/' + id, { method: 'DELETE', headers: authHeaders(false) }); loadCats(); } catch (e) { toast(e.message, false); } };

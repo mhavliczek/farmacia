@@ -27,6 +27,24 @@ router.post('/', requireAdmin, async (req, res) => {
   }
 });
 
+// PUT /api/categorias/:id — solo admin edita nombre y descripción
+router.put('/:id', requireAdmin, async (req, res) => {
+  const { nombre, descripcion } = req.body;
+  if (!nombre || !String(nombre).trim()) return res.status(400).json({ error: 'nombre requerido' });
+  try {
+    const [r] = await pool.query(
+      'UPDATE categorias SET nombre = ?, descripcion = ? WHERE id = ?',
+      [String(nombre).trim(), descripcion ? String(descripcion).trim() : null, req.params.id]
+    );
+    if (!r.affectedRows) return res.status(404).json({ error: 'Categoría no existe' });
+    res.json({ ok: true });
+  } catch (e) {
+    if (e.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Categoría ya existe' });
+    console.error(e);
+    res.status(500).json({ error: 'Error al editar categoría' });
+  }
+});
+
 router.delete('/:id', requireAdmin, async (req, res) => {
   await pool.query('DELETE FROM categorias WHERE id = ?', [req.params.id]);
   res.json({ ok: true });

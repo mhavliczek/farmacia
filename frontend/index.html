@@ -169,10 +169,10 @@ tailwind.config = { darkMode: 'class', theme: { extend: {
       <h2 class="text-2xl font-semibold tracking-tight">Categorías</h2>
       <p class="text-sm text-slate-500 mb-4">Agrupan los medicamentos. Solo admin puede crear/eliminar.</p>
       <div class="grid lg:grid-cols-3 gap-4">
-        <form id="form-cat" class="card p-5 space-y-3 h-fit admin-only"><h3 class="font-medium">Nueva categoría</h3>
+        <form id="form-cat" class="card p-5 space-y-3 h-fit admin-only"><h3 id="form-cat-title" class="font-medium">Nueva categoría</h3>
           <div><label class="lbl">Nombre *</label><input id="c-nombre" class="input" required /></div>
           <div><label class="lbl">Descripción</label><input id="c-desc" class="input" /></div>
-          <button class="btn btn-primary w-full">Guardar</button>
+          <div class="flex gap-2"><button id="form-cat-submit" class="btn btn-primary flex-1">Guardar</button><button type="button" id="btn-cancel-cat" class="btn btn-secondary hidden">Cancelar</button></div>
         </form>
         <div class="lg:col-span-2 card p-5"><div id="list-cats" class="flex flex-wrap gap-2"></div></div>
       </div>
