@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Farmacia · Sistema de inventario</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { darkMode: 'class', theme: { extend: {
+  colors: { border: 'hsl(214.3 31.8% 91.4%)', background: 'hsl(0 0% 100%)', foreground: 'hsl(222.2 84% 4.9%)', muted: 'hsl(210 40% 96.1%)', primary: 'hsl(222.2 47.4% 11.2%)' },
+  borderRadius: { lg: '0.5rem', md: 'calc(0.5rem - 2px)', sm: 'calc(0.5rem - 4px)' }
+}}};
+</script>
+<style>
+  :root { --radius: .5rem; }
+  body { background: hsl(0 0% 98%); color: hsl(222.2 84% 4.9%); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; }
+  .card { background: white; border: 1px solid hsl(214.3 31.8% 91.4%); border-radius: var(--radius); box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; border-radius: var(--radius); font-size:.875rem; font-weight:500; padding:.55rem 1rem; border:1px solid transparent; cursor:pointer; transition:.15s; }
+  .btn-primary { background: hsl(222.2 47.4% 11.2%); color:white; } .btn-primary:hover { background: hsl(222.2 47.4% 18%); }
+  .btn-secondary { background:white; border-color:hsl(214.3 31.8% 91.4%); } .btn-secondary:hover { background:hsl(210 40% 96.1%); }
+  .btn-destructive { background: hsl(0 84.2% 60.2%); color:white; }
+  .btn-outline-green { border-color:#bbf7d0; background:#f0fdf4; color:#15803d; } .btn-outline-green:hover{ background:#dcfce7; }
+  .btn-outline-red { border-color:#fecaca; background:#fef2f2; color:#b91c1c; } .btn-outline-red:hover{ background:#fee2e2; }
+  .input, .select, .textarea { width:100%; border:1px solid hsl(214.3 31.8% 91.4%); border-radius:var(--radius); padding:.55rem .75rem; font-size:.875rem; background:white; outline:none; }
+  .input:focus, .select:focus, .textarea:focus { border-color:hsl(222.2 47.4% 40%); box-shadow:0 0 0 2px hsl(222.2 47.4% 92%); }
+  label.lbl { font-size:.8rem; font-weight:500; margin-bottom:.25rem; display:block; }
+  .badge { display:inline-flex; align-items:center; border-radius:9999px; padding:.15rem .6rem; font-size:.72rem; font-weight:600; border:1px solid; }
+  .badge-green{ background:#f0fdf4; color:#15803d; border-color:#bbf7d0;} .badge-red{ background:#fef2f2; color:#b91c1c; border-color:#fecaca;}
+  .badge-yellow{ background:#fefce8; color:#a16207; border-color:#fde68a;} .badge-gray{ background:hsl(210 40% 96.1%); color:hsl(222.2 47.4% 30%); border-color:hsl(214.3 31.8% 91.4%);}
+  .badge-blue{ background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe;}
+  table.tbl { width:100%; font-size:.875rem; } table.tbl th { text-align:left; font-weight:500; color:hsl(215.4 16.3% 46.9%); font-size:.75rem; text-transform:uppercase; letter-spacing:.03em; padding:.6rem .75rem; border-bottom:1px solid hsl(214.3 31.8% 91.4%); }
+  table.tbl td { padding:.65rem .75rem; border-bottom:1px solid hsl(220 13% 95%); vertical-align:middle; }
+  table.tbl tr:last-child td{ border-bottom:none; } table.tbl tr:hover td{ background:hsl(210 40% 98%); }
+  .sidebar-link{ display:flex; align-items:center; gap:.6rem; padding:.55rem .75rem; border-radius:var(--radius); font-size:.875rem; color:#334155; cursor:pointer; } .sidebar-link:hover{ background:hsl(210 40% 96.1%);} .sidebar-link.active{ background:hsl(222.2 47.4% 11.2%); color:white;}
+  .modal-bg{ position:fixed; inset:0; background:rgba(15,23,42,.5); display:flex; align-items:center; justify-content:center; z-index:50; padding:1rem;}
+  .hidden{ display:none !important; }
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="view-login" class="min-h-screen flex items-center justify-center p-4">
+  <div class="card w-full max-w-md p-8">
+    <div class="flex items-center gap-3 mb-2">
+      <div class="w-10 h-10 rounded-lg bg-slate-900 text-white flex items-center justify-center text-xl">💊</div>
+      <div><h1 class="font-semibold text-lg leading-tight">Farmacia</h1><p class="text-sm text-slate-500">Sistema de inventario y recetas</p></div>
+    </div>
+    <div class="flex gap-2 my-5 p-1 bg-slate-100 rounded-lg">
+      <button id="tab-login" class="btn btn-primary flex-1">Iniciar sesión</button>
+      <button id="tab-register" class="btn flex-1">Registrarse</button>
+    </div>
+    <form id="form-login" class="space-y-4">
+      <div><label class="lbl">Email</label><input id="login-email" class="input" type="email" placeholder="admin@farmacia.cl" required /></div>
+      <div><label class="lbl">Contraseña</label><input id="login-pass" class="input" type="password" placeholder="••••••••" required /></div>
+      <button class="btn btn-primary w-full">Entrar</button>
+      <p class="text-xs text-slate-500">Primera vez: ve a Registrarse y crea el usuario admin.</p>
+    </form>
+    <form id="form-register" class="space-y-4 hidden">
+      <div><label class="lbl">Nombre</label><input id="reg-nombre" class="input" placeholder="Tu nombre" required /></div>
+      <div><label class="lbl">Email</label><input id="reg-email" class="input" type="email" placeholder="admin@farmacia.cl" required /></div>
+      <div><label class="lbl">Contraseña</label><input id="reg-pass" class="input" type="password" minlength="6" placeholder="Mínimo 6 caracteres" required /></div>
+      <div><label class="lbl">Rol</label><select id="reg-rol" class="select"><option value="admin">Admin</option><option value="farmaceutico" selected>Farmacéutico</option><option value="cajero">Cajero</option></select></div>
+      <button class="btn btn-primary w-full">Crear cuenta</button>
+    </form>
+    <p id="auth-error" class="text-sm text-red-600 mt-3 hidden"></p>
+  </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="view-app" class="hidden min-h-screen flex">
+  <aside class="w-60 shrink-0 border-r bg-white p-4 hidden md:flex flex-col gap-1">
+    <div class="flex items-center gap-2 px-2 py-3"><div class="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center">💊</div><div class="font-semibold">Farmacia</div></div>
+    <div class="sidebar-link active" data-view="dashboard">📊 Dashboard</div>
+    <div class="sidebar-link" data-view="medicamentos">💉 Medicamentos</div>
+    <div class="sidebar-link" data-view="inventario">📦 Entradas / Salidas</div>
+    <div class="sidebar-link" data-view="recetas">📄 Recetas médicas</div>
+    <div class="sidebar-link" data-view="categorias">🏷️ Categorías</div>
+    <div class="mt-auto pt-4 border-t">
+      <div class="px-2 text-sm"><div id="user-nombre" class="font-medium"></div><div id="user-email" class="text-xs text-slate-500"></div></div>
+      <button id="btn-logout" class="btn btn-secondary w-full mt-2">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <main class="flex-1 p-4 md:p-8 max-w-6xl mx-auto w-full">
+    <div class="md:hidden flex gap-2 mb-4 overflow-x-auto" id="mobile-nav"></div>
+
+    <!-- DASHBOARD -->
+    <section id="sec-dashboard">
+      <h2 class="text-2xl font-semibold tracking-tight">Dashboard</h2>
+      <p class="text-sm text-slate-500 mb-4">Resumen del inventario de la farmacia.</p>
+      <!-- Alerta permanente de vencimiento (≤ 7 días + vencidos) -->
+      <div id="alert-exp" class="hidden mb-4 p-4 rounded-lg border border-red-300 bg-red-50 text-sm">
+        <div class="flex items-center gap-2 font-semibold text-red-700">⚠️ Alerta de vencimiento <span id="alert-exp-count" class="badge badge-red"></span></div>
+        <div id="alert-exp-list" class="mt-2 space-y-1 text-red-900"></div>
+      </div>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="card p-5"><div class="text-xs text-slate-500">Medicamentos</div><div id="st-total" class="text-2xl font-bold">—</div></div>
+        <div class="card p-5"><div class="text-xs text-slate-500">Pastillas totales</div><div id="st-pastillas" class="text-2xl font-bold">—</div></div>
+        <div class="card p-5"><div class="text-xs text-slate-500">Bajo stock</div><div id="st-bajo" class="text-2xl font-bold text-yellow-700">—</div></div>
+        <div class="card p-5"><div class="text-xs text-slate-500">Vencidos</div><div id="st-vencidos" class="text-2xl font-bold text-red-600">—</div></div>
+      </div>
+      <div class="grid lg:grid-cols-2 gap-4">
+        <div class="card p-5"><h3 class="font-medium mb-3">Próximos a vencer</h3><div id="list-vencer" class="space-y-2 text-sm"></div></div>
+        <div class="card p-5"><h3 class="font-medium mb-3">Últimos movimientos</h3><div id="list-movs" class="space-y-2 text-sm"></div></div>
+      </div>
+    </section>
+
+    <!-- MEDICAMENTOS -->
+    <section id="sec-medicamentos" class="hidden">
+      <div class="flex flex-wrap items-center gap-3 mb-4">
+        <div><h2 class="text-2xl font-semibold tracking-tight">Medicamentos</h2><p class="text-sm text-slate-500">Nombre, gramaje, descripción, cantidad, vencimiento y categoría.</p></div>
+        <button id="btn-nuevo-med" class="btn btn-primary ml-auto">+ Nuevo medicamento</button>
+      </div>
+      <div class="card p-4 mb-4 flex flex-wrap gap-3">
+        <input id="f-q" class="input !w-64" placeholder="🔍 Buscar por nombre..." />
+        <select id="f-cat" class="select !w-52"><option value="">Todas las categorías</option></select>
+        <label class="text-sm flex items-center gap-2"><input id="f-vencidos" type="checkbox" /> Vencidos</label>
+        <label class="text-sm flex items-center gap-2"><input id="f-bajo" type="checkbox" /> Bajo stock</label>
+        <button id="btn-filtrar" class="btn btn-secondary">Filtrar</button>
+      </div>
+      <div class="card overflow-x-auto"><table class="tbl"><thead><tr>
+        <th>Medicamento</th><th>Gramaje</th><th>Categoría</th><th>Cantidad</th><th>Vencimiento</th><th>Precio</th><th>Acciones</th>
+      </tr></thead><tbody id="tbl-meds"></tbody></table></div>
+    </section>
+
+    <!-- INVENTARIO -->
+    <section id="sec-inventario" class="hidden">
+      <h2 class="text-2xl font-semibold tracking-tight">Inventario</h2>
+      <p class="text-sm text-slate-500 mb-4">Entradas y salidas de medicamentos (kardex).</p>
+      <div class="card p-4 mb-4 flex flex-wrap gap-3">
+        <select id="m-tipo" class="select !w-44"><option value="">Entradas + salidas</option><option value="entrada">Solo entradas</option><option value="salida">Solo salidas</option></select>
+        <button id="btn-movs" class="btn btn-secondary">Actualizar</button>
+      </div>
+      <div class="card overflow-x-auto"><table class="tbl"><thead><tr><th>Fecha</th><th>Medicamento</th><th>Tipo</th><th>Cant.</th><th>Motivo</th><th>Usuario</th></tr></thead><tbody id="tbl-movs"></tbody></table></div>
+    </section>
+
+    <!-- RECETAS -->
+    <section id="sec-recetas" class="hidden">
+      <div class="flex items-center gap-3 mb-4"><div><h2 class="text-2xl font-semibold tracking-tight">Recetas médicas</h2><p class="text-sm text-slate-500">Sube JPG, PNG, WEBP o PDF (máx 10 MB).</p></div></div>
+      <div class="grid lg:grid-cols-3 gap-4">
+        <form id="form-receta" class="card p-5 space-y-3 h-fit">
+          <h3 class="font-medium">Subir receta</h3>
+          <div><label class="lbl">Paciente *</label><input id="r-paciente" class="input" required placeholder="Nombre del paciente" /></div>
+          <div><label class="lbl">Médico</label><input id="r-medico" class="input" placeholder="Dr. ..." /></div>
+          <div><label class="lbl">Medicamento relacionado</label><select id="r-med" class="select"><option value="">— Ninguno —</option></select></div>
+          <div><label class="lbl">Archivo *</label><input id="r-archivo" class="input" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" required /></div>
+          <div><label class="lbl">Observaciones</label><textarea id="r-obs" class="textarea" rows="2"></textarea></div>
+          <button class="btn btn-primary w-full">Subir receta</button>
+        </form>
+        <div class="lg:col-span-2 card p-5">
+          <div class="flex gap-2 mb-3">
+            <select id="r-filtro" class="select !w-48"><option value="">Todos los estados</option><option value="pendiente">Pendientes</option><option value="dispensada">Dispensadas</option><option value="rechazada">Rechazadas</option></select>
+            <button id="btn-recetas" class="btn btn-secondary">Actualizar</button>
+          </div>
+          <div id="list-recetas" class="space-y-3"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CATEGORIAS -->
+    <section id="sec-categorias" class="hidden">
+      <h2 class="text-2xl font-semibold tracking-tight">Categorías</h2>
+      <p class="text-sm text-slate-500 mb-4">Agrupan los medicamentos.</p>
+      <div class="grid lg:grid-cols-3 gap-4">
+        <form id="form-cat" class="card p-5 space-y-3 h-fit"><h3 class="font-medium">Nueva categoría</h3>
+          <div><label class="lbl">Nombre *</label><input id="c-nombre" class="input" required /></div>
+          <div><label class="lbl">Descripción</label><input id="c-desc" class="input" /></div>
+          <button class="btn btn-primary w-full">Guardar</button>
+        </form>
+        <div class="lg:col-span-2 card p-5"><div id="list-cats" class="flex flex-wrap gap-2"></div></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- MODAL ALERTA VENCIMIENTO (se muestra al ingresar al sistema) -->
+<div id="modal-alert" class="modal-bg hidden">
+  <div class="card w-full max-w-md p-6 bg-white">
+    <h3 class="font-semibold text-lg text-red-700">⚠️ Medicamentos por vencer o vencidos</h3>
+    <p class="text-sm text-slate-500 mb-3">Revisa estos productos: vencen en 7 días o menos, o ya están vencidos.</p>
+    <div id="modal-alert-list" class="space-y-2 text-sm max-h-64 overflow-y-auto"></div>
+    <div class="flex gap-2 pt-4">
+      <button id="btn-alert-ver" class="btn btn-primary flex-1">Ver inventario</button>
+      <button id="btn-alert-cerrar" class="btn btn-secondary">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MEDICAMENTO -->
+<div id="modal-med" class="modal-bg hidden">
+  <form id="form-med" class="card w-full max-w-lg p-6 space-y-3 bg-white">
+    <h3 id="med-modal-title" class="font-semibold text-lg">Nuevo medicamento</h3>
+    <input type="hidden" id="med-id" />
+    <div><label class="lbl">Nombre *</label><input id="med-nombre" class="input" required placeholder="Ej: Paracetamol" /></div>
+    <div class="grid grid-cols-2 gap-3">
+      <div><label class="lbl">Gramaje</label><input id="med-gramaje" class="input" placeholder="Ej: 500mg, 1g, 250mg/5ml" /></div>
+      <div><label class="lbl">Categoría</label><select id="med-cat" class="select"><option value="">— Sin categoría —</option></select></div>
+    </div>
+    <div><label class="lbl">Descripción</label><textarea id="med-desc" class="textarea" rows="2"></textarea></div>
+    <div class="grid grid-cols-2 gap-3">
+      <div><label class="lbl">Cantidad (pastillas) *</label><input id="med-cant" class="input" type="number" min="0" value="0" required /></div>
+      <div><label class="lbl">Fecha vencimiento *</label><input id="med-vence" class="input" type="date" required /></div>
+      <div><label class="lbl">Precio</label><input id="med-precio" class="input" type="number" min="0" step="0.01" value="0" /></div>
+      <div><label class="lbl">Stock mínimo</label><input id="med-min" class="input" type="number" min="0" value="10" /></div>
+    </div>
+    <div class="flex gap-2 pt-2"><button type="submit" class="btn btn-primary flex-1">Guardar</button><button type="button" id="btn-cerrar-med" class="btn btn-secondary">Cancelar</button></div>
+  </form>
+</div>
+
+<!-- MODAL STOCK -->
+<div id="modal-stock" class="modal-bg hidden">
+  <form id="form-stock" class="card w-full max-w-sm p-6 space-y-3 bg-white">
+    <h3 id="stock-title" class="font-semibold">Registrar entrada</h3>
+    <input type="hidden" id="stock-id" /><input type="hidden" id="stock-tipo" />
+    <div><label class="lbl">Cantidad</label><input id="stock-cant" class="input" type="number" min="1" value="1" required /></div>
+    <div><label class="lbl">Motivo</label><input id="stock-motivo" class="input" placeholder="Compra, venta, ajuste..." /></div>
+    <div class="flex gap-2"><button class="btn btn-primary flex-1">Confirmar</button><button type="button" id="btn-cerrar-stock" class="btn btn-secondary">Cancelar</button></div>
+  </form>
+</div>
+
+<div id="toast" class="fixed bottom-4 right-4 hidden"><div class="card px-4 py-3 text-sm font-medium shadow-lg" id="toast-msg"></div></div>
+
+<script src="./app.js"></script>
+</body>
+</html>
